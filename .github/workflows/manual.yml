@@ -37,38 +37,33 @@ jobs:
       - name: Cherry-pick Commits
         id: cherry-pick
         run: |
-          # Parse input to get story numbers
-          IFS=',' read -ra STORY_NUMBERS <<< "${{ github.event.inputs.story_numbers }}"
+          STORY_NUMBERS=${{ github.event.inputs.story_numbers }}
+          IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
 
-          # Loop through each story number and cherry-pick related commits
-          for STORY_NUMBER in "${STORY_NUMBERS[@]}"; do
-            echo "Story: $STORY_NUMBER"
-            git fetch origin
-            COMMIT_HASHES=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
-            for COMMIT_HASH in $COMMIT_HASHES; do
-              echo "Commit: $COMMIT_HASH"
-              git cherry-pick $COMMIT_HASH || (
-                echo "Conflict detected. Staging conflict markers."
-                git add .  # Stage the conflict markers
-                git commit -m "Cherry-pick commit ${COMMIT_HASH} for story ${STORY_NUMBER} with conflicts"
-              )
+          for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
+            echo "Processing story number: $STORY_NUMBER"
+            COMMITS=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
+            for COMMIT in $COMMITS; do
+              echo "Cherry-picking commit: $COMMIT"
+              git cherry-pick $COMMIT || (git add . && git commit -m "Conflict resolution for $COMMIT" && git cherry-pick --continue || git cherry-pick --skip)
             done
           done
 
-          # Push the changes back to the repository
-          git push origin $NEW_BRANCH --force
+      - name: Push changes
+        run: |
+          NEW_BRANCH="cherry-pick-to-${{ github.event.inputs.target_branch }}"
+          git push origin $NEW_BRANCH
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: cherry-pick-branch
           commit-message: 'Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }}'
+          branch: "cherry-pick-to-${{ github.event.inputs.target_branch }}"
+          base: ${{ github.event.inputs.target_branch }}
           title: 'Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }}'
           body: |
             Cherry-picked commits for the following stories:
             ${{ github.event.inputs.story_numbers }}
             Note: Conflicts need to be resolved manually.
           labels: 'automated'
-          target: ${{ github.event.inputs.target_branch }}  # Specify the target branch dynamically
-
