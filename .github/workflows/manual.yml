@@ -3,8 +3,8 @@ name: Cherry-pick and Create Pull Request
 on:
   workflow_dispatch:
     inputs:
-      story_number:
-        description: 'Story number to cherry-pick commits for'
+      story_numbers:
+        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103)'
         required: true
       target_branch:
         description: 'Branch to create the PR against'
@@ -26,16 +26,18 @@ jobs:
       - name: Create a new branch for cherry-picking
         run: |
           TARGET_BRANCH=${{ github.event.inputs.target_branch }}
-          STORY_NUMBER=${{ github.event.inputs.story_number }}
-          NEW_BRANCH="cherry-pick-${STORY_NUMBER}-to-${TARGET_BRANCH}"
+          NEW_BRANCH="cherry-pick-to-${TARGET_BRANCH}"
           git checkout -b $NEW_BRANCH
 
       - name: Find and cherry-pick commits
         run: |
-          STORY_NUMBER=${{ github.event.inputs.story_number }}
-          COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}" --pretty=format:"%h")
-          for COMMIT in $COMMITS; do
-            git cherry-pick $COMMIT || (git add . && git commit -m "Cherry-pick conflict resolution for $COMMIT")
+          STORY_NUMBERS=${{ github.event.inputs.story_numbers }}
+          IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
+          for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
+            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}" --pretty=format:"%h")
+            for COMMIT in $COMMITS; do
+              git cherry-pick $COMMIT || (git add . && git commit -m "Cherry-pick conflict resolution for $COMMIT")
+            done
           done
 
       - name: Check if there are changes
@@ -47,17 +49,16 @@ jobs:
 
       - name: Push changes
         run: |
-          STORY_NUMBER=${{ github.event.inputs.story_number }}
-          NEW_BRANCH="cherry-pick-${STORY_NUMBER}-to-${{ github.event.inputs.target_branch }}"
+          NEW_BRANCH="cherry-pick-to-${{ github.event.inputs.target_branch }}"
           git push origin $NEW_BRANCH
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Cherry-picked commits for feature/${{ github.event.inputs.story_number }}"
-          branch: "cherry-pick-${{ github.event.inputs.story_number }}-to-${{ github.event.inputs.target_branch }}"
+          commit-message: "Cherry-picked commits for ${{ github.event.inputs.story_numbers }}"
+          branch: "cherry-pick-to-${{ github.event.inputs.target_branch }}"
           base: ${{ github.event.inputs.target_branch }}
-          title: "Cherry-picked PR for feature/${{ github.event.inputs.story_number }}"
-          body: "This PR includes cherry-picked commits for feature/${{ github.event.inputs.story_number }}. Please resolve any conflicts."
+          title: "Cherry-picked PR for ${{ github.event.inputs.story_numbers }}"
+          body: "This PR includes cherry-picked commits for ${{ github.event.inputs.story_numbers }}. Please resolve any conflicts."
           labels: automated-pr
