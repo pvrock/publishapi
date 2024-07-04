@@ -34,7 +34,7 @@ jobs:
           for STORY_NUMBER in "${STORY_NUMBERS[@]}"; do
             echo story: $STORY_NUMBER
             git fetch origin
-            COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h" origin/${{ github.event.inputs.base_branch }})
+            COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
             echo commit: $COMMIT_HASH
             git cherry-pick $COMMIT_HASH || (
               echo "Conflict detected. Staging conflict markers."
