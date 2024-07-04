@@ -42,22 +42,21 @@ jobs:
 
           # Loop through each story number and cherry-pick related commits
           for STORY_NUMBER in "${STORY_NUMBERS[@]}"; do
-            echo story: $STORY_NUMBER
+            echo "Story: $STORY_NUMBER"
             git fetch origin
-            COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
-            echo $(git log --all)
-            echo commit: $COMMIT_HASH
-            git cherry-pick $COMMIT_HASH || (
-              echo "Conflict detected. Staging conflict markers."
-              git add .  # Stage the conflict markers
-              git commit -m "Cherry-pick commit ${COMMIT_HASH} for story ${STORY_NUMBER} with conflicts"
-            )
+            COMMIT_HASHES=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
+            for COMMIT_HASH in $COMMIT_HASHES; do
+              echo "Commit: $COMMIT_HASH"
+              git cherry-pick $COMMIT_HASH || (
+                echo "Conflict detected. Staging conflict markers."
+                git add .  # Stage the conflict markers
+                git commit -m "Cherry-pick commit ${COMMIT_HASH} for story ${STORY_NUMBER} with conflicts"
+              )
+            done
           done
 
           # Push the changes back to the repository
-          git add .
-          git commit -m "Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }} with unresolved conflicts"
-          git push origin cherry-pick-branch --force
+          git push origin $NEW_BRANCH --force
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
