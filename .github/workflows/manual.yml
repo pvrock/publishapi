@@ -35,7 +35,7 @@ jobs:
           IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
           for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
             echo "Processing story number: $STORY_NUMBER"
-            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}:" --pretty=format:"%h")
+            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}[[:space:]]" --pretty=format:"%h")
             if [ -z "$COMMITS" ]; then
               echo "No commits found for story number: $STORY_NUMBER"
             else
