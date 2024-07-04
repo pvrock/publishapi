@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       story_numbers:
-        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103)'
+        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103) v2'
         required: true
       target_branch:
         description: 'Branch to create the PR against'
+        required: true
+      base_branch:
+        description: 'Branch to base the new branch on (e.g., main, test)'
         required: true
 
 jobs:
@@ -26,8 +29,9 @@ jobs:
       - name: Create a new branch for cherry-picking
         run: |
           TARGET_BRANCH=${{ github.event.inputs.target_branch }}
+          BASE_BRANCH=${{ github.event.inputs.base_branch }}
           NEW_BRANCH="cherry-pick-to-${TARGET_BRANCH}"
-          git checkout -b $NEW_BRANCH
+          git checkout -b $NEW_BRANCH origin/$BASE_BRANCH
 
       - name: Find and cherry-pick commits
         run: |
@@ -64,7 +68,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Cherry-picked commits for ${{ github.event.inputs.story_numbers }}"
           branch: "cherry-pick-to-${{ github.event.inputs.target_branch }}"
-          base: ${{ github.event.inputs.target_branch }}
+          base: ${{ github.event.inputs.base_branch }}
           title: "Cherry-picked PR for ${{ github.event.inputs.story_numbers }}"
           body: "This PR includes cherry-picked commits for ${{ github.event.inputs.story_numbers }}. Please resolve any conflicts."
           labels: automated-pr
