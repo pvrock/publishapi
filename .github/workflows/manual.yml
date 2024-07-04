@@ -48,7 +48,7 @@ jobs:
             else
               for COMMIT in $COMMITS; do
                 echo "Cherry-picking commit: $COMMIT"
-                git cherry-pick $COMMIT || (git add . && git cherry-pick --continue) || (git add . && git cherry-pick --abort)
+                git cherry-pick $COMMIT || (git add . && git cherry-pick --continue)
               done
             fi
           done
