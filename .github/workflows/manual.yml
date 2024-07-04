@@ -35,6 +35,7 @@ jobs:
             echo story: $STORY_NUMBER
             git fetch origin
             COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
+            echo $(git log --all)
             echo commit: $COMMIT_HASH
             git cherry-pick $COMMIT_HASH || (
               echo "Conflict detected. Staging conflict markers."
