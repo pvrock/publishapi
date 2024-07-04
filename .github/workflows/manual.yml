@@ -1,77 +1,48 @@
-name: Cherry-pick and Create Pull Request
+name: Cherry-pick and PR
 
 on:
   workflow_dispatch:
     inputs:
-      story_numbers:
-        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103) v2'
+      story:
+        description: 'Story number to cherry-pick (e.g., HD-101)'
         required: true
       target_branch:
-        description: 'Branch to create the PR against'
-        required: true
-      base_branch:
-        description: 'Branch to base the new branch on (e.g., main, test)'
+        description: 'Target branch to raise the PR against (e.g., main)'
         required: true
 
 jobs:
-  cherry-pick-create-pr:
+  cherry-pick-and-pr:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
-      - name: Configure git
+      - name: Set up Git
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
 
-      - name: Create a new branch for cherry-picking
+      - name: Cherry-pick commits
         run: |
-          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
-          BASE_BRANCH=${{ github.event.inputs.base_branch }}
-          NEW_BRANCH="cherry-pick-to-${TARGET_BRANCH}"
-          git checkout -b $NEW_BRANCH origin/$BASE_BRANCH
+          git checkout ${{ github.event.inputs.target_branch }}
+          git pull origin ${{ github.event.inputs.target_branch }}
+          git checkout -b cherry-pick-${{ github.event.inputs.story }}
 
-      - name: Find and cherry-pick commits
-        run: |
-          STORY_NUMBERS=${{ github.event.inputs.story_numbers }}
-          IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
-          for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
-            echo "Processing story number: $STORY_NUMBER"
-            COMMITS=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
-            echo "Processing commit: $COMMITS"
-            if [ -z "$COMMITS" ]; then
-              echo "No commits found for story number: $STORY_NUMBER"
-            else
-              for COMMIT in $COMMITS; do
-                echo "Cherry-picking commit: $COMMIT"
-                git cherry-pick $COMMIT || (git add . && git cherry-pick --continue)
-              done
-            fi
-          done
-
-      - name: Check if there are changes
-        run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No changes to commit"
-            exit 0
-          fi
+          # Cherry-pick commits with the specified story in their message
+          git cherry-pick $(git log origin/test --grep="${{ github.event.inputs.story }}" --format="%H")
 
       - name: Push changes
         run: |
-          NEW_BRANCH="cherry-pick-to-${{ github.event.inputs.target_branch }}"
-          git push origin $NEW_BRANCH
+          git push origin cherry-pick-${{ github.event.inputs.story }}
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Cherry-picked commits for ${{ github.event.inputs.story_numbers }}"
-          branch: "cherry-pick-to-${{ github.event.inputs.target_branch }}"
-          base: ${{ github.event.inputs.base_branch }}
-          title: "Cherry-picked PR for ${{ github.event.inputs.story_numbers }}"
-          body: "This PR includes cherry-picked commits for ${{ github.event.inputs.story_numbers }}. Please resolve any conflicts."
-          labels: automated-pr
+          branch: cherry-pick-${{ github.event.inputs.story }}
+          title: Cherry-pick ${{
+            github.event.inputs.story }} commits to ${{ github.event.inputs.target_branch }}
+          body: |
+            This PR includes cherry-picked commits from test branch with ${
+              { github.event.inputs.story }}.
+          base: ${{ github.event.inputs.target_branch }}
