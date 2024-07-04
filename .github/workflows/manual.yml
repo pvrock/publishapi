@@ -1,51 +1,58 @@
-name: Cherry-pick and PR
+name: Cherry-pick Commits and Raise PR
 
 on:
   workflow_dispatch:
     inputs:
-      story:
-        description: 'Story number to cherry-pick (e.g., HD-101)'
+      story_numbers:
+        description: 'List of story numbers to cherry-pick commits for (comma-separated)'
+        required: true
+      base_branch:
+        description: 'Base branch to create cherry-pick branch from'
         required: true
       target_branch:
-        description: 'Target branch to raise the PR against (e.g., main)'
+        description: 'Target branch to raise the Pull Request against'
         required: true
 
 jobs:
   cherry-pick-and-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up Git
+      - name: Create Branch
         run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
+          git checkout -b cherry-pick-branch ${{ github.event.inputs.base_branch }}
 
-      - name: Fetch all branches
-        run: git fetch --all
-
-      - name: Cherry-pick commits
+      - name: Cherry-pick Commits
+        id: cherry-pick
         run: |
-          git checkout ${{ github.event.inputs.target_branch }}
-          git pull origin ${{ github.event.inputs.target_branch }}
-          git checkout -b cherry-pick-${{ github.event.inputs.story }}
+          # Parse input to get story numbers
+          IFS=',' read -ra STORY_NUMBERS <<< "${{ github.event.inputs.story_numbers }}"
 
-          # Fetch commits from origin/test that match the story number and cherry-pick each commit
-          git log origin/test --grep="${{ github.event.inputs.story }}" --format="%H" | xargs -I {} git cherry-pick {}
+          # Loop through each story number and cherry-pick related commits
+          for STORY_NUMBER in "${STORY_NUMBERS[@]}"; do
+            git fetch origin
+            COMMIT_HASH=$(git log --grep="story-${STORY_NUMBER}" --format=format:"%H" origin/${{ github.event.inputs.base_branch }})
+            git cherry-pick $COMMIT_HASH || true
+          done
 
-      - name: Push changes
-        run: |
-          git push origin cherry-pick-${{ github.event.inputs.story }}
+          # Push the changes back to the repository
+          git add .
+          git commit -m "Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }} with unresolved conflicts"
+          git push origin cherry-pick-branch --force
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: cherry-pick-${{ github.event.inputs.story }}
-          title: Cherry-pick ${{
-            github.event.inputs.story }} commits to ${{ github.event.inputs.target_branch }}
+          branch: cherry-pick-branch
+          commit-message: 'Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }}'
+          title: 'Cherry-pick commits for stories: ${{ github.event.inputs.story_numbers }}'
           body: |
-            This PR includes cherry-picked commits from test branch with ${
-              { github.event.inputs.story }}.
-          base: ${{ github.event.inputs.target_branch }}
+            Cherry-picked commits for the following stories:
+            ${{ github.event.inputs.story_numbers }}
+            Note: Conflicts need to be resolved manually.
+          labels: 'automated'
+          target: ${{ github.event.inputs.target_branch }}  # Specify the target branch dynamically
+
