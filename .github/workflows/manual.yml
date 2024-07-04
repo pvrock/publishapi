@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       story_numbers:
-        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103) v1'
+        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103)'
         required: true
       target_branch:
         description: 'Branch to create the PR against'
@@ -35,7 +35,7 @@ jobs:
           IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
           for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
             echo "Processing story number: $STORY_NUMBER"
-            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}[[:space:]]" --pretty=format:"%h")
+            COMMITS=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
             if [ -z "$COMMITS" ]; then
               echo "No commits found for story number: $STORY_NUMBER"
             else
