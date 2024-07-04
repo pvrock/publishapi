@@ -32,8 +32,10 @@ jobs:
 
           # Loop through each story number and cherry-pick related commits
           for STORY_NUMBER in "${STORY_NUMBERS[@]}"; do
+            echo story: $STORY_NUMBER
             git fetch origin
-            COMMIT_HASH=$(git log --grep="story-${STORY_NUMBER}" --format=format:"%H" origin/${{ github.event.inputs.base_branch }})
+            COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h" origin/${{ github.event.inputs.base_branch }})
+            echo commit: $COMMIT_HASH
             git cherry-pick $COMMIT_HASH || true
           done
 
