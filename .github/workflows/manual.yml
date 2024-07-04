@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       story_numbers:
-        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103)'
+        description: 'Comma-separated list of story numbers to cherry-pick commits for (e.g., HD-102,HD-103) v1'
         required: true
       target_branch:
         description: 'Branch to create the PR against'
@@ -34,10 +34,16 @@ jobs:
           STORY_NUMBERS=${{ github.event.inputs.story_numbers }}
           IFS=',' read -ra STORY_ARRAY <<< "$STORY_NUMBERS"
           for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
-            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}" --pretty=format:"%h")
-            for COMMIT in $COMMITS; do
-              git cherry-pick $COMMIT || (git add . && git commit -m "Cherry-pick conflict resolution for $COMMIT")
-            done
+            echo "Processing story number: $STORY_NUMBER"
+            COMMITS=$(git log --all --grep="feature/${STORY_NUMBER}:" --pretty=format:"%h")
+            if [ -z "$COMMITS" ]; then
+              echo "No commits found for story number: $STORY_NUMBER"
+            else
+              for COMMIT in $COMMITS; do
+                echo "Cherry-picking commit: $COMMIT"
+                git cherry-pick $COMMIT || (git add . && git commit -m "Cherry-pick conflict resolution for $COMMIT")
+              done
+            fi
           done
 
       - name: Check if there are changes
