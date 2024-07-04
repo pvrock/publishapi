@@ -36,7 +36,11 @@ jobs:
             git fetch origin
             COMMIT_HASH=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h" origin/${{ github.event.inputs.base_branch }})
             echo commit: $COMMIT_HASH
-            git cherry-pick $COMMIT_HASH || true
+            git cherry-pick $COMMIT_HASH || (
+              echo "Conflict detected. Staging conflict markers."
+              git add .  # Stage the conflict markers
+              git commit -m "Cherry-pick commit ${COMMIT_HASH} for story ${STORY_NUMBER} with conflicts"
+            )
           done
 
           # Push the changes back to the repository
