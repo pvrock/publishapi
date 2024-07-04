@@ -10,6 +10,7 @@ public class PublishapiApplication {
 
 	public static void main(String[] args) {
 		// this is v1
+		// one more added
 		SpringApplication.run(PublishapiApplication.class, args);
 	}
 	@Bean
