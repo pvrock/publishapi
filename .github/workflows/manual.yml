@@ -31,8 +31,8 @@ jobs:
           git pull origin ${{ github.event.inputs.target_branch }}
           git checkout -b cherry-pick-${{ github.event.inputs.story }}
 
-          # Cherry-pick commits with the specified story in their message
-          git cherry-pick $(git log origin/test --grep="${{ github.event.inputs.story }}" --format="%H")
+          # Fetch commits from origin/test that match the story number and cherry-pick each commit
+          git log origin/test --grep="${{ github.event.inputs.story }}" --format="%H" | xargs -I {} git cherry-pick {}
 
       - name: Push changes
         run: |
