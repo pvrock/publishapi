@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 public class PublishapiApplication {
 
 	public static void main(String[] args) {
+		// this is v1
 		SpringApplication.run(PublishapiApplication.class, args);
 	}
 	@Bean
