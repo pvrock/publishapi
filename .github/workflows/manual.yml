@@ -40,6 +40,7 @@ jobs:
           for STORY_NUMBER in "${STORY_ARRAY[@]}"; do
             echo "Processing story number: $STORY_NUMBER"
             COMMITS=$(git log --all --grep="${STORY_NUMBER}" --pretty=format:"%h")
+            echo "Processing story number: $(git log --all --pretty=format:"%h")"
             if [ -z "$COMMITS" ]; then
               echo "No commits found for story number: $STORY_NUMBER"
             else
