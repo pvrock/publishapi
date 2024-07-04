@@ -20,9 +20,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Create Branch
+      - name: Create a new branch for cherry-picking
         run: |
-          git checkout -b cherry-pick-branch ${{ github.event.inputs.base_branch }}
+          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
+          BASE_BRANCH=${{ github.event.inputs.base_branch }}
+          NEW_BRANCH="cherry-pick-to-${TARGET_BRANCH}"
+          git checkout -b $NEW_BRANCH origin/$BASE_BRANCH
 
       - name: Cherry-pick Commits
         id: cherry-pick
